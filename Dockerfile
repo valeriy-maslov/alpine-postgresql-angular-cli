@@ -1,10 +1,5 @@
-FROM postgres:alpine
-MAINTAINER Valeriy Maslov <valeriy.maslov@akvelon.com>
-
-### This Docker image provides both running Plan webapp build process
-### with Plan API integration testing environment.
-### Based on postgres:9.6. Node installation was got from node:6.10 dockerfile
-### and modified for plan.
+FROM postgres:latest
+MAINTAINER Valeriy Maslov <hcspidergrasp@gmail.com>
 
 ### Environment Variables
 #Postgres
@@ -19,67 +14,30 @@ ENV YARN_VERSION 0.21.3
 
 ### Installation of dependencies
 
-RUN apk add --no-cache \
-        ca-certificates \
-        curl \
-        wget \
-        bzr \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		ca-certificates \
+		curl \
+		wget \
+		bzr \
         git \
         openssh-client \
-        procps \
         autoconf \
-        automake \
-        bzip2 \
-        bzip2-dev \
-        curl-dev \
-        db-dev \
-        file \
-        g++ \
-        gcc \
-        gdbm-dev \
-        geoip-dev \
-        glib-dev \
-        imagemagick-dev \
-        jpeg-dev \
-        krb5-dev \
-        libc-dev \
-        libevent-dev \
-        libffi-dev \
-        libpng-dev \
-        libressl-dev \
-        libtool \
-        libwebp-dev \
-        libxml2-dev \
-        libxslt-dev \
-        linux-headers \
-        make \
-        ncurses-dev \
-        patch \
-        readline-dev \
-        sqlite-dev \
-        xz \
-        xz-dev \
-        yaml-dev \
-        zlib-dev \
-        fontconfig
+		build-essential \
+		libbz2-dev \
+		libcurl4-openssl-dev \
+		libevent-dev \
+		libffi-dev \
+		libglib2.0-dev \
+		libfontconfig1-dev \
+	&& rm -rf /var/lib/apt/lists/*
+
 
 ### Node.js Installation
+RUN groupadd --gid 1000 node \
+  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
 
-RUN addgroup -g 1000 node \
-        && adduser -u 1000 -G node -s /bin/sh -D node \
-        && apk add --no-cache \
-            libstdc++ \
-        && apk add --no-cache --virtual .build-deps \
-            binutils-gold \
-            curl \
-            g++ \
-            gcc \
-            gnupg \
-            libgcc \
-            linux-headers \
-            make \
-            python \
 # gpg keys listed at https://github.com/nodejs/node#release-team
+RUN set -ex \
   && for key in \
     9554F04D7259F04124DE6B476D5A82AC7E37093B \
     94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
@@ -91,22 +49,17 @@ RUN addgroup -g 1000 node \
     56730D5401028683275BD23C23EFEFE93C4CFFFE \
   ; do \
     gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-  done \
-    && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION.tar.xz" \
-    && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
-    && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
-    && grep " node-v$NODE_VERSION.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
-    && tar -xf "node-v$NODE_VERSION.tar.xz" \
-    && cd "node-v$NODE_VERSION" \
-    && ./configure \
-    && make -j$(getconf _NPROCESSORS_ONLN) \
-    && make install \
-    && apk del .build-deps \
-    && cd .. \
-    && rm -Rf "node-v$NODE_VERSION" \
-    && rm "node-v$NODE_VERSION.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt
+  done
 
-RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg \
+RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" \
+  && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
+  && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
+  && grep " node-v$NODE_VERSION-linux-x64.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
+  && tar -xJf "node-v$NODE_VERSION-linux-x64.tar.xz" -C /usr/local --strip-components=1 \
+  && rm "node-v$NODE_VERSION-linux-x64.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt \
+  && ln -s /usr/local/bin/node /usr/local/bin/nodejs
+
+RUN set -ex \
   && for key in \
     6A010C5166006599AA17F08146C2130DFD2497F5 \
   ; do \
@@ -117,19 +70,7 @@ RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg \
   && gpg --batch --verify yarn.js.asc yarn.js \
   && rm yarn.js.asc \
   && mv yarn.js /usr/local/bin/yarn \
-  && chmod +x /usr/local/bin/yarn \
-  && apk del .build-deps-yarn
-
-
-### Getting webapp into container
-RUN mkdir /tmp/plan-client
-WORKDIR /tmp/plan-client
-ADD src/main/webapp /tmp/plan-client
-
-### Building Plan client
-RUN npm install
-RUN npm run test
-RUN npm run build
+  && chmod +x /usr/local/bin/yarn
 
 ### Exposing Postgres to World
 EXPOSE 5432
