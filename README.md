@@ -1,0 +1,1 @@
+# Docker Image with PostgreSQL & Angular CLI environment based on Alpine
