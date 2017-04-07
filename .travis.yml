@@ -2,6 +2,11 @@ sudo: required
 
 services:
   - docker
+
+language: go
+
+go:
+  - '1.5'
   
 env:
   global:
