@@ -2,10 +2,6 @@ FROM postgres:latest
 MAINTAINER Valeriy Maslov <hcspidergrasp@gmail.com>
 
 ### Environment Variables
-#Postgres
-ENV POSTGRES_DB=plan
-ENV POSTGRES_USER=julia
-ENV POSTGRES_PASSWORD=julia
 #node
 ENV NPM_CONFIG_LOGLEVEL info
 ENV NODE_VERSION 6.10.2
