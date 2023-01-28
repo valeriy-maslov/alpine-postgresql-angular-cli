@@ -1,5 +1,5 @@
 FROM postgres:latest
-MAINTAINER Valeriy Maslov <hcspidergrasp@gmail.com>
+MAINTAINER Valeriy Maslov 
 
 ### Environment Variables
 #node
